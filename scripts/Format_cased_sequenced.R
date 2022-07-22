@@ -6,7 +6,7 @@ clin = read.csv( file.path(input_dir, "CLIN.txt"), stringsAsFactors=FALSE , sep=
 
 patient = sort(unique( paste( "P" , clin$patient_id , sep="" ) ) )
 
-case = as.data.frame( cbind( patient , rep( 1 , length(patient) ) , rep( 0 , length(patient) ) , rep( 1 , length(patient) ) ) )
+case = as.data.frame( cbind( patient , rep( 0 , length(patient) ) , rep( 0 , length(patient) ) , rep( 1 , length(patient) ) ) )
 colnames(case) = c( "patient" , "snv" , "cna" , "expr" )
 rownames(case) = patient
 
