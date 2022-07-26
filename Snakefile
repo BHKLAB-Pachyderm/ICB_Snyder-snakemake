@@ -15,7 +15,7 @@ rule get_MultiAssayExp:
     input:
         S3.remote(prefix + "processed/CLIN.csv"),
         S3.remote(prefix + "processed/EXPR.csv"),
-        S3.remote(prefix + "processed/SNV.csv"),
+        # S3.remote(prefix + "processed/SNV.csv"),
         S3.remote(prefix + "processed/cased_sequenced.csv"),
         S3.remote(prefix + "annotation/Gencode.v19.annotation.RData")
     resources:
@@ -33,34 +33,27 @@ rule get_MultiAssayExp:
         '
         """
 
-rule download_annotation:
-    output:
-        S3.remote(prefix + "annotation/Gencode.v19.annotation.RData")
-    shell:
-        """
-        wget https://github.com/BHKLAB-Pachyderm/Annotations/blob/master/Gencode.v19.annotation.RData?raw=true -O {prefix}annotation/Gencode.v19.annotation.RData 
-        """
-
-rule format_snv:
-    output:
-        S3.remote(prefix + "processed/SNV.csv")
-    input:
-        S3.remote(prefix + "download/SNV.txt"),
-        S3.remote(prefix + "processed/cased_sequenced.csv")
-    resources:
-        mem_mb=2000
-    shell:
-        """
-        Rscript scripts/Format_SNV.R \
-        {prefix}download \
-        {prefix}processed \
-        """
+# rule format_snv:
+#     output:
+#         S3.remote(prefix + "processed/SNV.csv")
+#     input:
+#         S3.remote(prefix + "download/SNV.txt"),
+#         S3.remote(prefix + "processed/cased_sequenced.csv")
+#     resources:
+#         mem_mb=2000
+#     shell:
+#         """
+#         Rscript scripts/Format_SNV.R \
+#         {prefix}download \
+#         {prefix}processed \
+#         """
 
 rule format_expr:
     output:
         S3.remote(prefix + "processed/EXPR.csv")
     input:
         S3.remote(prefix + "download/EXPR.txt"),
+        S3.remote(prefix + "annotation/Gencode.v19.annotation.RData"),
         S3.remote(prefix + "processed/cased_sequenced.csv")
     resources:
         mem_mb=2000
@@ -69,6 +62,7 @@ rule format_expr:
         Rscript scripts/Format_EXPR.R \
         {prefix}download \
         {prefix}processed \
+        {prefix}annotation
         """
 
 rule format_clin:
@@ -82,14 +76,15 @@ rule format_clin:
         """
         Rscript scripts/Format_CLIN.R \
         {prefix}download \
-        {prefix}processed \
+        {prefix}processed
         """
 
 rule format_cased_sequenced:
     output:
         S3.remote(prefix + "processed/cased_sequenced.csv")
     input:
-        S3.remote(prefix + "download/CLIN.txt")
+        S3.remote(prefix + "download/CLIN.txt"),
+        S3.remote(prefix + "download/EXPR.txt")
     resources:
         mem_mb=2000
     shell:
@@ -99,16 +94,36 @@ rule format_cased_sequenced:
         {prefix}processed \
         """
 
-rule download_data:
+rule download_annotation:
+    output:
+        S3.remote(prefix + "annotation/Gencode.v19.annotation.RData")
+    shell:
+        """
+        wget https://github.com/BHKLAB-Pachyderm/Annotations/blob/master/Gencode.v19.annotation.RData?raw=true -O {prefix}annotation/Gencode.v19.annotation.RData 
+        """
+
+rule format_downloaded_data:
+    input:
+        S3.remote(prefix + "download/data_clinical.csv"),
+        S3.remote(prefix + "download/2850417_Neoantigen_RNA_bams.csv"),
+        S3.remote(prefix + "download/kallisto.zip")
     output:
         S3.remote(prefix + "download/CLIN.txt"),
-        S3.remote(prefix + "download/EXPR.txt"),
-        S3.remote(prefix + "download/SNV.txt")
+        S3.remote(prefix + "download/EXPR.txt")
+        # S3.remote(prefix + "download/SNV.txt")
     resources:
         mem_mb=2000
     shell:
         """
-        wget {data_source}CLIN.txt -O {prefix}download/CLIN.txt
-        wget {data_source}EXPR.txt -O {prefix}download/EXPR.txt
-        wget {data_source}SNV.txt -O {prefix}download/SNV.txt
+        Rscript scripts/format_downloaded_data.R {prefix}download
         """ 
+
+rule download_data:
+    output:
+        S3.remote(prefix + "download/data_clinical.csv"),
+        S3.remote(prefix + "download/2850417_Neoantigen_RNA_bams.csv"),
+        S3.remote(prefix + "download/kallisto.zip")
+    shell:
+        '''
+        Rscript scripts/download_data.R {prefix}download
+        '''

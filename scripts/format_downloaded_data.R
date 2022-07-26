@@ -1,33 +1,9 @@
 library(data.table)
 library(readxl) 
 library(stringr)
-options(timeout=300)
 
 args <- commandArgs(trailingOnly = TRUE)
 work_dir <- args[1]
-
-download.file(
-  url = 'https://github.com/hammerlab/multi-omic-urothelial-anti-pdl1/raw/master/data_clinical.csv', 
-  destfile = file.path(work_dir, 'data_clinical.csv')
-)
-download.file(
-  url = 'https://github.com/hammerlab/multi-omic-urothelial-anti-pdl1/raw/master/data/2850417_Neoantigen_RNA_bams.csv',
-  destfile = file.path(work_dir, '2850417_Neoantigen_RNA_bams.csv')
-)
-download.file(
-  url = 'https://zenodo.org/record/546110/files/kallisto.zip?download=1',
-  destfile = file.path(work_dir, 'kallisto.zip')
-)
-
-# download.file(
-#   url = 'https://github.com/hammerlab/multi-omic-urothelial-anti-pdl1/raw/master/data_effects.csv', 
-#   destfile = file.path(work_dir, 'data_effects.csv')
-# )
-# download.file(
-#   url = 'https://github.com/hammerlab/multi-omic-urothelial-anti-pdl1/raw/master/data_variants.csv', 
-#   destfile = file.path(work_dir, 'data_variants.csv')
-# )
-
 
 # CLIN.txt
 clin <- read.csv(file.path(work_dir, 'data_clinical.csv'), header=FALSE, stringsAsFactors=FALSE, fileEncoding="latin1")
@@ -36,8 +12,14 @@ clin <- clin[, clin[1, ] != 'NA']
 colnames(clin) <- clin[1, ]
 clin <- clin[-1, ]
 clin <- clin[, c('patient_id', colnames(clin)[colnames(clin) != 'patient_id'])]
+clin$patient_id <- paste0('P', clin$patient_id)
+clin <- clin[, colnames(clin)[!str_detect(colnames(clin), 'Unnamed')]]
+
+write.table( clin , file=file.path(work_dir, "CLIN.txt") , quote=FALSE , sep="\t" , col.names=TRUE , row.names=TRUE )
 
 # EXPR.txt
+unzip(file.path(work_dir, 'kallisto.zip'), exdir=file.path(work_dir))
+
 counts <- data.frame(matrix(ncol = 3, nrow = 0))
 colnames(counts) <- c('patient_id', 'target_id', 'est_counts')
 filemap <- read.csv(file.path(work_dir, '2850417_Neoantigen_RNA_bams.csv'), header=FALSE, sep='\t')
@@ -63,8 +45,24 @@ for(patient in colnames(expr)){
     return(df[df$target_id == target_id, 'est_counts'])
   }))
 }
-saveRDS(expr, file=file.path(work_dir, 'expr.rds'))
-load(file.path(work_dir, "Gencode.v40.annotation.RData"))
+
+# expr <- readRDS(file.path(work_dir, 'expr.rds'))
+
+colnames(expr) <- unlist(lapply(colnames(expr), function(patient){
+  if(nchar(patient) < 4){
+    return(paste0(strrep('0', 4 - nchar(patient)), patient))
+  }
+  return(patient)
+}))
+
+colnames(expr) <- paste0('P', colnames(expr))
+
+write.table( expr , file=file.path(work_dir, "EXPR.txt") , quote=FALSE , sep="\t" , col.names=TRUE , row.names=TRUE )
+
+file.remove(file.path(work_dir, 'data_clinical.csv'))
+file.remove(file.path(work_dir, '2850417_Neoantigen_RNA_bams.csv'))
+file.remove(file.path(work_dir, 'kallisto.zip'))
+unlink(file.path(work_dir, "kallisto"), recursive = TRUE)
 
 # SNV.txt
 # TO DO Curate SNV data

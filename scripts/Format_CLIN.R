@@ -10,8 +10,8 @@ selected_cols <- c( "patient_id" , "Sex" ,  "Age" , "Best.Response.RECIST.1.1" ,
 clin = cbind( clin_original[ , selected_cols ] , "Ureteral" , "PD-1/PD-L1" , NA , NA, NA , NA , NA, NA )
 colnames(clin) = c( "patient" , "sex" , "age"  ,"recist"  , "os" , "t.os" , "t.pfs" , "pfs" , "primary" , "drug_type" , "response.other.info" , "response" , "histo" , "stage" , "dna" , "rna")
 
-clin$patient = paste( "P" , clin$patient , sep="" )
-clin_original$patient_id <- paste0('P', clin_original$patient_id)
+# clin$patient = paste( "P" , clin$patient , sep="" )
+# clin_original$patient_id <- paste0('P', clin_original$patient_id)
 clin_original <- clin_original[, colnames(clin_original)[colnames(clin_original) != 'patient']]
 
 clin$rna = "tpm"
